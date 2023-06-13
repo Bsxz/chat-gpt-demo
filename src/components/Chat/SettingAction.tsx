@@ -1,9 +1,11 @@
 import { toBlob, toJpeg } from "html-to-image"
-import { Match, Show, Switch, type JSXElement } from "solid-js"
+import type { Setter } from "solid-js"
+import { Match, Show, Switch, type JSXElement, createSignal } from "solid-js"
+import type { Option } from "~/types"
 import { createStore } from "solid-js/store"
 import { defaultEnv } from "~/env"
 import { clickOutside } from "~/hooks"
-import { RootStore, loadSession } from "~/store"
+import { FZFData, RootStore, loadSession } from "~/store"
 import type { ChatMessage, Model } from "~/types"
 import {
   copyToClipboard,
@@ -16,7 +18,9 @@ import {
 } from "~/utils"
 import { Selector, Switch as SwitchButton } from "../Common"
 import { useNavigate } from "solid-start"
-
+import { defaultInputBoxHeight } from "~/components/Chat/InputBox"
+import { useOptions } from "~/hooks/useOptions"
+import { useInputShow } from "~/hooks/useInputShow"
 export const [actionState, setActionState] = createStore({
   showSetting: "none" as "none" | "global" | "session",
   success: false as false | "markdown" | "link",
@@ -41,7 +45,8 @@ const roleIcons: Record<FakeRoleUnion, string> = {
   user: "i-ri:user-3-fill bg-gradient-to-r from-red-300 to-blue-700 "
 }
 
-export default function SettingAction() {
+export default function SettingAction(props: { setCandidateOptions: Setter<Option[]> }) {
+  const { setCandidateOptions } = props
   const { store, setStore } = RootStore
   const navigator = useNavigate()
   function clearSession() {
@@ -49,7 +54,6 @@ export default function SettingAction() {
       messages.filter(k => k.type === "locked")
     )
   }
-
   // tree shaking
   clickOutside
   return (
@@ -222,9 +226,12 @@ export default function SettingAction() {
           />
           <ActionItem
             onClick={() => {
-              setActionState("showSetting", k =>
-                k !== "session" ? "session" : "none"
-              )
+              setStore("inputContent", ' ')
+              setCandidateOptions(FZFData.promptOptions)
+              store.inputRef?.focus()
+              // setActionState("showSetting", k =>
+              //   k !== "session" ? "session" : "none"
+              // )
             }}
             icon="i-carbon:user-role"
             // label="对话设置"

@@ -58,7 +58,7 @@ export default function PromptList(props: {
   })
 
   return (
-    <Show when={props.options.length}>
+    < Show when={props.options.length} >
       <ul
         ref={containerRef!}
         class="bg-slate bg-op-20 dark:text-slate text-slate-7 overflow-y-auto rounded-t"
@@ -76,7 +76,7 @@ export default function PromptList(props: {
           )}
         </For>
       </ul>
-    </Show>
+    </Show >
   )
 }
 

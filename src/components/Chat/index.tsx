@@ -17,6 +17,7 @@ export default function () {
   const [inputBoxHeight, setInputBoxHeight] = createSignal(
     defaultInputBoxHeight
   )
+
   const [searchParams] = useSearchParams()
   const q = searchParams[SearchParamKey]
   const { store, setStore } = RootStore
@@ -77,7 +78,6 @@ export default function () {
 
   async function sendMessage(value?: string, fakeRole?: FakeRoleUnion) {
     const inputValue = value ?? store.inputContent
-    if (!inputValue) return
     setStore("inputContent", "")
     if (fakeRole === "assistant") {
       setActionState("fakeRole", "normal")
@@ -138,12 +138,12 @@ export default function () {
           store.sessionSettings.continuousDialogue
             ? store.validContext
             : [
-                ...store.validContext,
-                {
-                  role: "user",
-                  content: inputValue
-                }
-              ]
+              ...store.validContext,
+              {
+                role: "user",
+                content: inputValue
+              }
+            ]
         )
       } catch (error: any) {
         setStore("loading", false)

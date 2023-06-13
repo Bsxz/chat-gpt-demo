@@ -1,12 +1,10 @@
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { Fzf } from "fzf"
-import throttle from "just-throttle"
 import {
   type Accessor,
   type Setter,
   Show,
   createEffect,
-  createSignal,
   onMount,
   batch
 } from "solid-js"
@@ -16,7 +14,8 @@ import { parsePrompts, scrollToBottom } from "~/utils"
 import SettingAction, { actionState, type FakeRoleUnion } from "./SettingAction"
 import SlashSelector from "./SlashSelector"
 import { useNavigate } from "solid-start"
-
+import { useInputShow } from "~/hooks/useInputShow"
+import { useOptions } from "~/hooks/useOptions"
 // 3em
 export const defaultInputBoxHeight = 48
 export default function ({
@@ -32,8 +31,8 @@ export default function ({
   sendMessage(content?: string, fakeRole?: FakeRoleUnion): void
   stopStreamFetch(): void
 }) {
-  const [candidateOptions, setCandidateOptions] = createSignal<Option[]>([])
-  const [compositionend, setCompositionend] = createSignal(true)
+  const { candidateOptions, setCandidateOptions, handleInput, setSuitableheight } = useOptions({ setHeight })
+  const { setCompositionend } = useInputShow({ handleInput })
   const navgiate = useNavigate()
   const { store, setStore } = RootStore
   onMount(() => {
@@ -66,16 +65,6 @@ export default function ({
     }
   })
 
-  function setSuitableheight() {
-    const scrollHeight = store.inputRef?.scrollHeight
-    if (scrollHeight)
-      setHeight(
-        scrollHeight > window.innerHeight - 80
-          ? window.innerHeight - 80
-          : scrollHeight
-      )
-  }
-
   createEffect(prev => {
     store.inputContent
     if (prev) {
@@ -106,58 +95,6 @@ export default function ({
     store.inputRef?.focus()
   }
 
-  const searchOptions = throttle(
-    (value: string) => {
-      if (/^\s{2,}$|^\/{2,}$/.test(value))
-        return setCandidateOptions(FZFData.sessionOptions)
-      if (value === "/" || value === " ")
-        return setCandidateOptions(FZFData.promptOptions)
-
-      const sessionQuery = value.replace(
-        /^\s{2,}(.*)\s*$|^\/{2,}(.*)\s*$/,
-        "$1$2"
-      )
-      const promptQuery = value.replace(/^\s(.*)\s*$|^\/(.*)\s*$/, "$1$2")
-      if (sessionQuery !== value) {
-        setCandidateOptions(
-          FZFData.fzfSessions!.find(sessionQuery).map(k => ({
-            ...k.item,
-            positions: k.positions
-          }))
-        )
-      } else if (promptQuery !== value) {
-        setCandidateOptions(
-          FZFData.fzfPrompts!.find(promptQuery).map(k => ({
-            ...k.item,
-            positions: k.positions
-          }))
-        )
-      }
-    },
-    100,
-    {
-      trailing: false,
-      leading: true
-    }
-  )
-
-  async function handleInput() {
-    // 重新设置高度，让输入框可以自适应高度，-1 是为了标记不是初始状态
-    setHeight(defaultInputBoxHeight - 1)
-    batch(() => {
-      setSuitableheight()
-      if (!compositionend()) return
-      const value = store.inputRef?.value
-      if (value) {
-        setStore("inputContent", value)
-        searchOptions(value)
-      } else {
-        setStore("inputContent", "")
-        setCandidateOptions([])
-      }
-    })
-  }
-
   return (
     <div
       class="pb-2em px-2em fixed bottom-0 z-100"
@@ -173,7 +110,7 @@ export default function ({
         }}
       >
         <Show when={!store.loading && !candidateOptions().length}>
-          <SettingAction />
+          <SettingAction setCandidateOptions={setCandidateOptions} />
         </Show>
         <Show
           when={!store.loading}
@@ -227,7 +164,8 @@ export default function ({
                     setStore("inputContent", content)
                   }
                 }
-              }}
+              }
+              }
               onInput={handleInput}
               style={{
                 height: height() + "px"
